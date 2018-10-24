@@ -1,0 +1,202 @@
+﻿<!doctype html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        table, tbody {
+            width: 100%;
+            height: 100%;
+            font-family: "微软雅黑",Cambria, Cochin, Georgia, Times, Times New Roman, serif
+        }
+
+        .conter {
+            width: 800px;
+            margin: auto;
+        }
+
+        .header {
+            height: 130px;
+            width: 100%;
+            border-bottom: 1px solid #808080;
+        }
+
+            .header h1 {
+                display: inline-block;
+                width: 400px;
+                line-height: 120px;
+                font-size: 26pt;
+            }
+
+        #infoBox {
+            display: inline-block;
+            float: right;
+            line-height: 130px;
+        }
+        #userName {
+            display: inline-block;
+            width: 50%;
+        }
+        .body{
+            width:100%;
+            height:400px;
+        }
+        .body > table,tbody{
+            width:100%;
+            height:100%;
+        }
+        #title{
+            height:30px;
+        }
+        .inlineUser{
+            width:30%;
+        }
+        .inlineUser>div{
+            height:100%;
+            width:100%;
+        }
+        #mess{
+            height:90%;
+        }
+        #putInfo {
+            display: inline-block;
+            width: 80%;
+        }
+    </style>
+    <link href="bootstrap.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <table>
+        <tr>
+            <td>
+                <div class="conter">
+                    <div class="header">
+                        <h1>web Socket在线聊天</h1>
+                        <div id="infoBox">
+                            <input id="userName" class="form-control" type="text"/>
+                            <button id="loginBtn" type="button" class="btn btn-secondary">登录</button>
+                            <button id="deLoginBtn" type="button" class="btn btn-secondary">断开</button>
+                        </div>
+                    </div>
+                    <div class="body">
+                        <table class="table table-bordered">
+                            <thead class="thead-dark">
+                                <tr id="title">
+                                    <td class="inlineUser">
+                                        <p>在线用户</p>
+                                    </td>
+                                    <td class="infoBox">聊天信息</td>
+                                </tr>
+                            </thead>
+                            <tr id="infoBody">
+                                <td class="inlineUser">
+                                    <div id="users"></div>
+                                </td>
+                                <td class="infoBox">
+                                    <div id="mess"></div>
+                                    <div>
+                                        <input id="putInfo" class="form-control"/>
+                                        <button id="send" class="btn btn-secondary">发送</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript"> 
+        var user = document.getElementById("userName");
+        var sendBtn = document.getElementById("send");
+        var message = document.getElementById("putInfo");
+        var disLogin = document.getElementById("deLoginBtn");
+
+        var socket = io("ws://localhost");
+
+        disLogin.style.display = "none";
+        document.getElementById("loginBtn").onclick = function () {
+            var mes = user.value;
+            if (mes) {
+                socket.emit("login", mes);
+                loginBtn.style.display = "none";
+                disLogin.style.display = "inline-block";
+            }  
+        }
+        disLogin.onclick = function () {
+            var mes = user.value;
+            if (mes) {
+                socket.emit("leave", mes);
+                loginBtn.style.display = "inline-block";
+                disLogin.style.display = "none";
+            }
+        }
+        sendBtn.onclick = function () {
+            var mes = message.value;
+            if (mes) {
+                message.value = "";
+                socket.emit("message", mes);
+                showMessage('')
+            }
+        }
+
+       /**
+        刷新用户列表时使用的数据源由服务器处理后直接放回来
+        */
+
+
+        //用户接受到信息
+        socket.on('message', function (data) {
+            showMessage('message', data);
+        });
+
+        //刷新在新用户
+        socket.on('inline', function (data) {
+            showMessage('refresh', data);
+        });
+
+        //有用户上线时，在用户列表中添加用户
+        socket.on('enter', function (data) {
+            showMessage('enter', data);
+        });
+
+        //有用户离开，重新刷新用户列表
+        socket.on('leave', function () {
+            loginBtn.style.display = "inline-block";
+            disLogin.style.display = "none";
+        });
+
+        function showMessage(type, str) {
+            if (type == 'enter') {
+                var p = document.createElement('p');
+                p.textContent = str;
+                p.setAttribute("id", str);
+                document.getElementById("users").appendChild(p);
+            } else if (type == 'message') {
+                var p = document.createElement('p');
+                p.textContent = str;
+                document.getElementById("mess").appendChild(p);
+            } else if (type == 'refresh') {
+                document.getElementById("users").innerHTML = str;
+            } else {
+                var users = document.getElementById("users");
+                for (var i = 0; i < users.length; i++) {
+                    if (users[i].id == str) {
+                        users.remove(users[i]);
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
